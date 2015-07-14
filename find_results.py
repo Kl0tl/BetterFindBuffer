@@ -38,7 +38,7 @@ class FindInFilesOpenFileCommand(sublime_plugin.TextCommand):
 
 
 class FindInFilesJumpCommand(sublime_plugin.TextCommand):
-    def run(self, edit, forward=True, cycle=True):
+    def jump(self, forward, cycle):
         caret = self.view.sel()[0]
         matches = self.filter_matches(caret, self.find_matches())
         if forward:
@@ -48,15 +48,27 @@ class FindInFilesJumpCommand(sublime_plugin.TextCommand):
         if match:
             self.goto_match(match)
 
-    def find_next_match(self, caret, matches, cycle):
-        default = matches[0] if cycle and len(matches) else None
-        return next((m for m in matches if caret.begin() < m.begin()), default)
+    def jump_to_first(self):
+        caret = self.view.sel()[0]
+        matches = self.filter_matches(caret, self.find_matches())
+        if len(matches):
+            self.goto_match(matches[0])
+
+    def jump_to_last(self):
+        caret = self.view.sel()[0]
+        matches = self.filter_matches(caret, self.find_matches())
+        if len(matches):
+            self.goto_match(matches[-1])
 
     def filter_matches(self, caret, matches):
         footers = self.view.find_by_selector('footer.find-in-files')
         lower_bound = next((f.end() for f in reversed(footers) if f.end() < caret.begin()), 0)
         upper_bound = next((f.end() for f in footers if f.end() > caret.begin()), self.view.size())
         return [m for m in matches if m.begin() > lower_bound and m.begin() < upper_bound]
+
+    def find_next_match(self, caret, matches, cycle):
+        default = matches[0] if cycle and len(matches) else None
+        return next((m for m in matches if caret.begin() < m.begin()), default)
 
     def find_prev_match(self, caret, matches, cycle):
         default = matches[-1] if cycle and len(matches) else None
@@ -68,6 +80,9 @@ class FindInFilesJumpCommand(sublime_plugin.TextCommand):
 
 
 class FindInFilesJumpFileCommand(FindInFilesJumpCommand):
+    def run(self, edit, forward=True, cycle=True):
+        self.jump(forward, cycle)
+
     def find_matches(self):
         return self.view.find_by_selector('entity.name.filename.find-in-files')
 
@@ -80,6 +95,9 @@ class FindInFilesJumpFileCommand(FindInFilesJumpCommand):
 
 
 class FindInFilesJumpMatchCommand(FindInFilesJumpCommand):
+    def run(self, edit, forward=True, cycle=True):
+        self.jump(forward, cycle)
+
     def find_matches(self):
         return self.view.get_regions('match')
 
@@ -92,6 +110,26 @@ class FindInFilesJumpMatchCommand(FindInFilesJumpCommand):
         h = v.line_height()
         if y < vy or y + h > vy + vh:
             v.show_at_center(match)
+
+
+class FindInFilesJumpFirstMatchCommand(FindInFilesJumpMatchCommand):
+    def run(self, edit):
+        self.jump_to_first()
+
+
+class FindInFilesJumpLastMatchCommand(FindInFilesJumpMatchCommand):
+    def run(self, edit):
+        self.jump_to_last()
+
+
+class FindInFilesJumpFirstFileCommand(FindInFilesJumpFileCommand):
+    def run(self, edit):
+        self.jump_to_first()
+
+
+class FindInFilesJumpLastFileCommand(FindInFilesJumpFileCommand):
+    def run(self, edit):
+        self.jump_to_last()
 
 
 class FindInFilesSetReadOnly(sublime_plugin.EventListener):
