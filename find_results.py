@@ -74,9 +74,37 @@ class FindInFilesJumpCommand(sublime_plugin.TextCommand):
         default = matches[-1] if cycle and len(matches) else None
         return next((m for m in reversed(matches) if caret.begin() > m.begin()), default)
 
-    def goto_match(self, match):
+    def move_caret_to_match(self, match):
         self.view.sel().clear()
         self.view.sel().add(match)
+
+    def scroll_viewport_to_match(self, match):
+        v = self.view
+        _, y = v.text_to_layout(match.begin())
+        top_offset = y - v.line_height()
+        v.set_viewport_position((0, top_offset), True)
+
+
+class FindInFilesJumpSearchCommand(FindInFilesJumpCommand):
+    def run(self, edit, forward=True, cycle=True):
+        self.jump(forward, cycle)
+
+    def find_matches(self):
+        headers = self.view.find_by_selector('header.find-in-files')
+        footers = self.view.find_by_selector('footer.find-in-files')
+        return [h.cover(f) for h, f in zip(headers, footers)]
+
+    def is_empty_search(self, search):
+        lines = self.view.lines(search)
+        return len(lines) < 4
+
+    def filter_matches(self, caret, matches):
+        return [m for m in matches if not self.is_empty_search(m)]
+
+    def goto_match(self, match):
+        region = sublime.Region(match.begin(), match.begin())
+        self.move_caret_to_match(region)
+        self.scroll_viewport_to_match(region)
 
 
 class FindInFilesJumpFileCommand(FindInFilesJumpCommand):
@@ -87,11 +115,9 @@ class FindInFilesJumpFileCommand(FindInFilesJumpCommand):
         return self.view.find_by_selector('entity.name.filename.find-in-files')
 
     def goto_match(self, match):
-        v = self.view
         region = sublime.Region(match.begin(), match.begin())
-        super(FindInFilesJumpFileCommand, self).goto_match(region)
-        top_offset = v.text_to_layout(region.begin())[1] - v.line_height()
-        v.set_viewport_position((0, top_offset), True)
+        self.move_caret_to_match(region)
+        self.scroll_viewport_to_match(region)
 
 
 class FindInFilesJumpMatchCommand(FindInFilesJumpCommand):
@@ -103,7 +129,7 @@ class FindInFilesJumpMatchCommand(FindInFilesJumpCommand):
 
     def goto_match(self, match):
         v = self.view
-        super(FindInFilesJumpMatchCommand, self).goto_match(match)
+        self.move_caret_to_match(match)
         vx, vy = v.viewport_position()
         vw, vh = v.viewport_extent()
         x, y = v.text_to_layout(match.begin())
@@ -128,6 +154,11 @@ class FindInFilesJumpFirstFileCommand(FindInFilesJumpFileCommand):
 
 
 class FindInFilesJumpLastFileCommand(FindInFilesJumpFileCommand):
+    def run(self, edit):
+        self.jump_to_last()
+
+
+class FindInFilesJumpCurrentSearchCommand(FindInFilesJumpSearchCommand):
     def run(self, edit):
         self.jump_to_last()
 

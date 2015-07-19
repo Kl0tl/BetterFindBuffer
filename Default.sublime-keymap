@@ -63,5 +63,27 @@
   "context": [
       {"key": "selector", "operator": "equal", "operand": "text.find-in-files" }
   ]
+},
+{
+  "keys": ["i"],
+  "command": "find_in_files_jump_search",
+  "context": [
+      {"key": "selector", "operator": "equal", "operand": "text.find-in-files" }
+  ]
+},
+{
+  "keys": ["l"],
+  "command": "find_in_files_jump_search",
+  "args": { "forward": false },
+  "context": [
+      {"key": "selector", "operator": "equal", "operand": "text.find-in-files" }
+  ]
+},
+{
+  "keys": ["L"],
+  "command": "find_in_files_jump_current_search",
+  "context": [
+      {"key": "selector", "operator": "equal", "operand": "text.find-in-files" }
+  ]
 }
 ]
